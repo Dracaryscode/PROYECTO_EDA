@@ -8,7 +8,6 @@ import TDA.Nodo;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class PanelElecciones extends JPanel {
 
@@ -32,13 +31,15 @@ public class PanelElecciones extends JPanel {
         setLayout(new BorderLayout());
         inicializarComponentes();
         configurarEventos();
-        actualizarComboCandidatos(); // Carga inicial
+        actualizarComboCandidatos();
     }
 
     private void inicializarComponentes() {
+        // Panel del formulario para crear elecciones
         JPanel panelFormulario = new JPanel(new GridLayout(5, 2, 10, 10));
         panelFormulario.setBorder(BorderFactory.createTitledBorder("Crear Elección"));
 
+        // Etiquetas y campos de texto
         JLabel lblNombre = new JLabel("Nombre:");
         txtNombre = new JTextField();
 
@@ -50,12 +51,10 @@ public class PanelElecciones extends JPanel {
 
         JLabel lblCandidatos = new JLabel("Candidatos Disponibles:");
         comboCandidatos = new JComboBox<>();
-        actualizarComboCandidatos();
 
         btnAgregarCandidato = new JButton("Agregar Candidato");
-        listaCandidatosAsociados = new DefaultListModel<>();
-        listCandidatosAsociados = new JList<>(listaCandidatosAsociados);
 
+        // Añadir componentes al formulario
         panelFormulario.add(lblNombre);
         panelFormulario.add(txtNombre);
         panelFormulario.add(lblFecha);
@@ -74,7 +73,10 @@ public class PanelElecciones extends JPanel {
         areaElecciones.setBorder(BorderFactory.createTitledBorder("Elecciones Creadas"));
         add(new JScrollPane(areaElecciones), BorderLayout.CENTER);
 
-        // Lista de candidatos asociados
+        // Panel para candidatos asociados
+        listaCandidatosAsociados = new DefaultListModel<>();
+        listCandidatosAsociados = new JList<>(listaCandidatosAsociados);
+
         JPanel panelCandidatosAsociados = new JPanel(new BorderLayout());
         panelCandidatosAsociados.setBorder(BorderFactory.createTitledBorder("Candidatos Asociados"));
         panelCandidatosAsociados.add(new JScrollPane(listCandidatosAsociados), BorderLayout.CENTER);
@@ -86,53 +88,70 @@ public class PanelElecciones extends JPanel {
     }
 
     private void configurarEventos() {
-        // Agregar candidato a la lista de asociados
-        btnAgregarCandidato.addActionListener(e -> {
-            String candidatoSeleccionado = (String) comboCandidatos.getSelectedItem();
-            if (candidatoSeleccionado != null && !listaCandidatosAsociados.contains(candidatoSeleccionado)) {
-                listaCandidatosAsociados.addElement(candidatoSeleccionado);
-            }
-        });
+    // Evento para agregar candidato a la lista de asociados
+    btnAgregarCandidato.addActionListener(e -> {
+        String candidatoSeleccionado = (String) comboCandidatos.getSelectedItem();
+        if (candidatoSeleccionado != null && !listaCandidatosAsociados.contains(candidatoSeleccionado)) {
+            listaCandidatosAsociados.addElement(candidatoSeleccionado);
+        }
+    });
 
-        // Crear elección
-        btnCrearEleccion.addActionListener(e -> {
-            String nombre = txtNombre.getText().trim();
-            String fecha = txtFecha.getText().trim();
-            String tipo = txtTipo.getText().trim();
+    // Evento para crear elección
+    btnCrearEleccion.addActionListener(e -> {
+        // Validar campos obligatorios
+        String nombre = txtNombre.getText().trim();
+        String fecha = txtFecha.getText().trim();
+        String tipo = txtTipo.getText().trim();
 
-            if (nombre.isEmpty() || fecha.isEmpty() || tipo.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Por favor, complete todos los campos.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
-            }
+        if (nombre.isEmpty() || fecha.isEmpty() || tipo.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Por favor, complete todos los campos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
-            Eleccion eleccion = new Eleccion(nombre, fecha, tipo);
+        // Crear nueva elección
+        Eleccion eleccion = new Eleccion(nombre, fecha, tipo);
 
-            for (int i = 0; i < listaCandidatosAsociados.size(); i++) {
-                String candidatoNombre = listaCandidatosAsociados.get(i);
-                for (Nodo<Candidato> nodo = listaCandidatos.getCabeza(); nodo != null; nodo = nodo.getPtr()) {
-                    if (nodo.getData().getNombre().equals(candidatoNombre)) {
-                        eleccion.agregarCandidato(nodo.getData());
-                    }
+        // Asociar los candidatos seleccionados a la elección
+        for (int i = 0; i < listaCandidatosAsociados.size(); i++) {
+            String candidatoNombre = listaCandidatosAsociados.get(i);
+            Nodo<Candidato> nodo = listaCandidatos.getCabeza();
+            while (nodo != null) {
+                if (nodo.getData().getNombre().equals(candidatoNombre)) {
+                    eleccion.agregarCandidato(nodo.getData());
+                    break;
                 }
+                nodo = nodo.getPtr();
             }
+        }
 
-            electionList.agregarFinal(eleccion);
+        // Agregar la elección a la lista general
+        electionList.agregarFinal(eleccion);
 
-            areaElecciones.append("Nombre: " + nombre + ", Fecha: " + fecha + ", Tipo: " + tipo + "\n");
-            listaCandidatosAsociados.clear();
-            limpiarFormulario();
+        // Mostrar detalles de la elección en el área de texto
+        areaElecciones.append("Nombre: " + nombre + ", Fecha: " + fecha + ", Tipo: " + tipo + ", Candidatos: ");
+        Nodo<Candidato> nodo = eleccion.getCandidatosAsociados().getCabeza();
+        while (nodo != null) {
+            areaElecciones.append(nodo.getData().getNombre() + " ");
+            nodo = nodo.getPtr();
+        }
+        areaElecciones.append("\n");
 
-            JOptionPane.showMessageDialog(this, "Elección creada correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        });
-    }
+        // Limpiar el formulario y la lista de candidatos asociados
+        listaCandidatosAsociados.clear();
+        limpiarFormulario();
 
-    public void actualizarComboCandidatos() {
-    comboCandidatos.removeAllItems(); // Limpia el ComboBox
-    for (Nodo<Candidato> nodo = listaCandidatos.getCabeza(); nodo != null; nodo = nodo.getPtr()) {
-        comboCandidatos.addItem(nodo.getData().getNombre()); // Agrega cada candidato
-    }
+        // Mostrar mensaje de éxito
+        JOptionPane.showMessageDialog(this, "Elección creada correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+    });
 }
 
+
+    public void actualizarComboCandidatos() {
+        comboCandidatos.removeAllItems(); // Limpia el ComboBox
+        for (Nodo<Candidato> nodo = listaCandidatos.getCabeza(); nodo != null; nodo = nodo.getPtr()) {
+            comboCandidatos.addItem(nodo.getData().getNombre()); // Agrega los nombres de los candidatos
+        }
+    }
 
     private void limpiarFormulario() {
         txtNombre.setText("");

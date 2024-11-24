@@ -33,13 +33,18 @@ public class VentanaPrincipal extends JFrame {
     }
 
     private void inicializarComponentes() {
+            // Inicializar las listas compartidas
+        electionList = new ListaEnlazada<>();
+        listaCandidatos = new ListaEnlazada<>();
+        
+        // Configurar panel principal
         panelPrincipal = new JPanel(new BorderLayout());
         setContentPane(panelPrincipal);
 
         // Crear paneles con las listas compartidas
         panelElecciones = new PanelElecciones(electionList, listaCandidatos);
         panelCandidatos = new PanelCandidatos(listaCandidatos,this);
-        panelVotos = new PanelVotos();
+        panelVotos = new PanelVotos(electionList);
         panelReportes = new PanelReportes(electionList); // Se pasa la lista de elecciones
 
         // Crear un TabbedPane para gestionar los paneles

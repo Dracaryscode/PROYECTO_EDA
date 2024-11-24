@@ -10,7 +10,8 @@ public class Eleccion {
     private String fecha;
     private String tipo;
     private ListaEnlazada<Candidato> candidatos;
-    private ListaEnlazada<Voto> votos;
+    private ListaEnlazada<Voto> votos;  
+    private ListaEnlazada<Candidato> candidatosAsociados;
 
     public Eleccion(String nombre, String fecha, String tipo) {
         this.nombre = nombre;
@@ -18,14 +19,22 @@ public class Eleccion {
         this.tipo = tipo;
         this.candidatos = new ListaEnlazada<>();
         this.votos = new ListaEnlazada<>();
+        this.candidatosAsociados = new ListaEnlazada<>();
     }
 
     public String getNombre() {
         return nombre;
     }
+    
+    public ListaEnlazada<Candidato> getCandidatosAsociados() {
+    return candidatosAsociados;
+}
 
     public void agregarCandidato(Candidato candidato) {
-        candidatos.agregarFinal(candidato);
+        if (candidatosAsociados == null) { 
+            candidatosAsociados = new ListaEnlazada<>(); // Seguridad adicional
+        }
+    candidatosAsociados.agregarFinal(candidato);
     }
 
     public void registrarVoto(Voto voto) {

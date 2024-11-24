@@ -1,5 +1,6 @@
 package GUI;
 
+import Models.Candidato;
 import Models.Eleccion;
 import javax.swing.*;
 import java.awt.*;
@@ -14,9 +15,12 @@ public class PanelReportes extends JPanel {
     private JButton btnGenerarReporte;
     private JTextArea areaReportes;
     private ListaEnlazada<Eleccion> elecciones;
+    private ListaEnlazada<Eleccion> electionList;
 
-    public PanelReportes(ListaEnlazada<Eleccion> elecciones) {
+
+    public PanelReportes(ListaEnlazada<Eleccion> electionList) {
         this.elecciones = elecciones;
+        this.electionList = electionList;
         setLayout(new BorderLayout(10, 10)); // Mejor separación
 
         // Panel superior para entrada y botón
@@ -75,7 +79,7 @@ public class PanelReportes extends JPanel {
                 } else {
                     Eleccion eleccion = buscarEleccion(nombreEleccion);
                     if (eleccion != null) {
-                        generarReporte(eleccion);
+                        generarReporte(nombreEleccion);
                     } else {
                         JOptionPane.showMessageDialog(PanelReportes.this, "Elección no encontrada.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -86,11 +90,20 @@ public class PanelReportes extends JPanel {
     }
 
     private Eleccion buscarEleccion(String nombreEleccion) {
-        for (Nodo<Eleccion> actual = elecciones.getCabeza(); actual != null; actual = actual.getPtr()) {
-            if (actual.getData().getNombre().equalsIgnoreCase(nombreEleccion)) {
-                return actual.getData();
-            }
+        if (elecciones == null || elecciones.getCabeza() == null) {
+        JOptionPane.showMessageDialog(this, "No hay elecciones disponibles.", "Error", JOptionPane.ERROR_MESSAGE);
+        return null;
         }
+
+        Nodo<Eleccion> nodo = elecciones.getCabeza();
+        while (nodo != null) {
+        if (nodo.getData().getNombre().equalsIgnoreCase(nombreEleccion)) {
+            return nodo.getData();
+        }
+            nodo = nodo.getPtr();
+        }
+
+        JOptionPane.showMessageDialog(this, "No se encontró la elección: " + nombreEleccion, "Error", JOptionPane.ERROR_MESSAGE);
         return null;
     }
 
@@ -98,14 +111,46 @@ public class PanelReportes extends JPanel {
         txtNombreEleccion.setText("");
     }
 
-    private void generarReporte(Eleccion eleccion) {
-        String reporte = "Nombre Elección: " + eleccion.getNombre() + "\n" +
-                         "Total Votos: " + eleccion.contarVotosTotales() + "\n" +
-                         "Votos Nulos: " + eleccion.contarVotosNulos() + "\n" +
-                         "Votos Blancos: " + eleccion.contarVotosBlancos() + "\n" +
-                         "Ganador: " + (eleccion.obtenerGanador() != null ? eleccion.obtenerGanador().getNombre() : "Sin ganador") + "\n" +
-                         "Fecha Generación: " + java.time.LocalDate.now() + "\n";
+    private void generarReporte(String nombreEleccion) {
+    Eleccion eleccionSeleccionada = null;
 
-        areaReportes.append(reporte + "\n-----------------------------\n");
+    // Buscar la elección por nombre
+    for (Nodo<Eleccion> nodo = electionList.getCabeza(); nodo != null; nodo = nodo.getPtr()) {
+        if (nodo.getData().getNombre().equalsIgnoreCase(nombreEleccion)) {
+            eleccionSeleccionada = nodo.getData();
+            break;
+        }
+    }
+
+    if (eleccionSeleccionada == null) {
+        JOptionPane.showMessageDialog(this, "No se encontró la elección: " + nombreEleccion, "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    // Calcular votos
+    int totalVotos = 0;
+    int votosNulos = 0;
+    int votosBlancos = 0;
+    Candidato ganador = null;
+    int maxVotos = 0;
+
+    for (Nodo<Candidato> nodo = eleccionSeleccionada.getCandidatosAsociados().getCabeza(); nodo != null; nodo = nodo.getPtr()) {
+        Candidato candidato = nodo.getData();
+        totalVotos += candidato.getVotos();
+        if (candidato.getVotos() > maxVotos) {
+            maxVotos = candidato.getVotos();
+            ganador = candidato;
+        }
+    }
+
+    // Mostrar el reporte
+    String reporte = "Nombre Elección: " + eleccionSeleccionada.getNombre() + "\n" +
+                     "Total Votos: " + totalVotos + "\n" +
+                     "Votos Nulos: " + votosNulos + "\n" +
+                     "Votos Blancos: " + votosBlancos + "\n" +
+                     "Ganador: " + (ganador != null ? ganador.getNombre() : "Sin ganador") + "\n" +
+                     "Fecha Generación: " + java.time.LocalDate.now() + "\n";
+
+    areaReportes.append(reporte + "\n-----------------------------\n");
     }
 }

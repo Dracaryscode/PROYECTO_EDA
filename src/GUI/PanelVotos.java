@@ -1,28 +1,38 @@
 package GUI;
 
+import Models.Candidato;
+import Models.Eleccion;
+import TDA.ListaEnlazada;
+import TDA.Nodo;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 
 public class PanelVotos extends JPanel {
 
     private JTextField txtIdMesa;
     private JTextField txtDniVotante;
-    private JTextField txtCandidato;
+    private JComboBox<String> comboCandidatos;
     private JButton btnRegistrarVoto;
     private JButton btnProcesarVotos;
     private JTextArea areaVotos;
 
-    public PanelVotos() {
+    private ListaEnlazada<Eleccion> elecciones;
+    private Eleccion eleccionActiva;
+
+    public PanelVotos(ListaEnlazada<Eleccion> elecciones) {
+        this.elecciones = elecciones;
         setLayout(new BorderLayout());
 
-        // Panel superior para formulario
-        JPanel panelFormulario = new JPanel();
-        panelFormulario.setLayout(new GridLayout(4, 2, 10, 10));
+        // Configuración de componentes
+        inicializarComponentes();
+        configurarEventos();
+    }
+
+    private void inicializarComponentes() {
+        JPanel panelFormulario = new JPanel(new GridLayout(4, 2, 10, 10));
         panelFormulario.setBorder(BorderFactory.createTitledBorder("Registro de Votos"));
 
-        // Campos del formulario
         JLabel lblIdMesa = new JLabel("ID Mesa:");
         txtIdMesa = new JTextField();
 
@@ -30,7 +40,7 @@ public class PanelVotos extends JPanel {
         txtDniVotante = new JTextField();
 
         JLabel lblCandidato = new JLabel("Candidato:");
-        txtCandidato = new JTextField();
+        comboCandidatos = new JComboBox<>();
 
         btnRegistrarVoto = new JButton("Registrar Voto");
         btnProcesarVotos = new JButton("Procesar Todos los Votos");
@@ -40,92 +50,92 @@ public class PanelVotos extends JPanel {
         panelFormulario.add(lblDniVotante);
         panelFormulario.add(txtDniVotante);
         panelFormulario.add(lblCandidato);
-        panelFormulario.add(txtCandidato);
+        panelFormulario.add(comboCandidatos);
         panelFormulario.add(btnRegistrarVoto);
         panelFormulario.add(btnProcesarVotos);
 
         add(panelFormulario, BorderLayout.NORTH);
 
-        // Área de texto para mostrar los votos registrados
         areaVotos = new JTextArea();
         areaVotos.setEditable(false);
         areaVotos.setBorder(BorderFactory.createTitledBorder("Votos Registrados"));
         add(new JScrollPane(areaVotos), BorderLayout.CENTER);
-
-        // Acciones de los botones
-        configurarEventos();
     }
 
     private void configurarEventos() {
-        btnRegistrarVoto.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String idMesa = txtIdMesa.getText().trim();
-                String dniVotante = txtDniVotante.getText().trim();
-                String candidato = txtCandidato.getText().trim();
+        btnRegistrarVoto.addActionListener(e -> {
+            String idMesa = txtIdMesa.getText().trim();
+            String dniVotante = txtDniVotante.getText().trim();
+            String candidatoSeleccionado = (String) comboCandidatos.getSelectedItem();
 
-                if (idMesa.isEmpty() && dniVotante.isEmpty() && candidato.isEmpty()) {
-                    // Si todos los campos están vacíos, registrar como voto blanco
-                    registrarVoto("Voto Blanco");
-                    limpiarFormulario();
-                } else if (idMesa.isEmpty() || dniVotante.isEmpty() || candidato.isEmpty()) {
-                    // Si solo un campo está vacío, registrar como voto nulo
-                    registrarVoto("Voto Nulo");
-                    limpiarFormulario();
-                } else if (!esDniValido(dniVotante)) {
-                    // Si el DNI no es válido, registrar como voto nulo
-                    registrarVoto("Voto Nulo");
-                    limpiarFormulario();
-                } else {
-                    // Si todos los campos son correctos, registrar el voto
-                    registrarVoto("Voto Registrado: ID Mesa: " + idMesa + ", DNI Votante: " + dniVotante + ", Candidato: " + candidato);
-                    limpiarFormulario();
+            if (idMesa.isEmpty() || dniVotante.isEmpty() || candidatoSeleccionado == null || eleccionActiva == null) {
+                JOptionPane.showMessageDialog(this, "Por favor, complete todos los campos y seleccione una elección.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            boolean votoValido = false;
+            for (Nodo<Candidato> nodo = eleccionActiva.getCandidatosAsociados().getCabeza(); nodo != null; nodo = nodo.getPtr()) {
+                if (nodo.getData().getNombre().equals(candidatoSeleccionado)) {
+                    nodo.getData().incrementarVotos(); // Incrementa los votos del candidato
+                    votoValido = true;
+                    break;
                 }
             }
-        });
 
-        btnProcesarVotos.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                procesarVotos();
+            if (votoValido) {
+                registrarVoto("Voto registrado para: " + candidatoSeleccionado);
+            } else {
+                registrarVoto("Voto Nulo");
             }
+
+            limpiarFormulario();
         });
+
+        btnProcesarVotos.addActionListener(e -> procesarVotos());
     }
 
-    private void limpiarFormulario() {
-        txtIdMesa.setText("");
-        txtDniVotante.setText("");
-        txtCandidato.setText("");
+    public void actualizarComboCandidatos(Eleccion eleccion) {
+    comboCandidatos.removeAllItems(); // Limpia el ComboBox antes de llenarlo
+    if (eleccion != null && eleccion.getCandidatosAsociados() != null) {
+        Nodo<Candidato> nodo = eleccion.getCandidatosAsociados().getCabeza();
+        while (nodo != null) {
+            comboCandidatos.addItem(nodo.getData().getNombre());
+            nodo = nodo.getPtr();
+        }
+    } else {
+        comboCandidatos.addItem("No hay candidatos disponibles");
     }
+    eleccionActiva = eleccion; // Establece la elección activa
+}
+
+
 
     private void registrarVoto(String voto) {
         areaVotos.append(voto + "\n");
         JOptionPane.showMessageDialog(this, voto, "Voto Registrado", JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private boolean esDniValido(String dni) {
-        // Verifica si el DNI tiene el formato correcto (solo números y 8 dígitos)
-        try {
-            Long.parseLong(dni);  // Intentamos convertir el DNI a número
-            return dni.length() == 8;  // Verifica que el DNI tenga 8 caracteres
-        } catch (NumberFormatException e) {
-            return false;  // Si ocurre un error al convertir, el DNI no es válido
-        }
+    private void limpiarFormulario() {
+        txtIdMesa.setText("");
+        txtDniVotante.setText("");
     }
 
     private void procesarVotos() {
-        String[] votos = areaVotos.getText().split("\n");
-
-        if (votos.length == 0 || areaVotos.getText().isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay votos para procesar.", "Información", JOptionPane.INFORMATION_MESSAGE);
+        if (eleccionActiva == null) {
+            JOptionPane.showMessageDialog(this, "No hay una elección activa para procesar.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        for (String voto : votos) {
-            System.out.println("Procesando: " + voto); // Simulación del procesamiento
+        StringBuilder resultados = new StringBuilder("Resultados de la elección: " + eleccionActiva.getNombre() + "\n");
+
+        for (Nodo<Candidato> nodo = eleccionActiva.getCandidatosAsociados().getCabeza(); nodo != null; nodo = nodo.getPtr()) {
+            Candidato candidato = nodo.getData();
+            resultados.append(candidato.getNombre())
+                      .append(": ")
+                      .append(candidato.getVotos())
+                      .append(" votos\n");
         }
 
-        areaVotos.setText("");
-        JOptionPane.showMessageDialog(this, "Todos los votos han sido procesados.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, resultados.toString(), "Resultados", JOptionPane.INFORMATION_MESSAGE);
     }
 }
